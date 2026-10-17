@@ -6,7 +6,7 @@ Two ways to re-run the original Quantum ESPRESSO inputs from scratch.
 
 ```bash
 conda install -c conda-forge qe=7.5 openmpi      # the version used for every run here
-bash reproduce/get_pseudos.sh pseudo             # downloads PseudoDojo v0.4 PBE SR standard NC and checks md5 sums
+bash reproduce/get_pseudos.sh pseudo             # downloads PseudoDojo v0.4 PBE SR standard NC and checks sha256 and md5 sums
 NP=16 NK=8 PSEUDO=$PWD/pseudo bash reproduce/run_qe.sh \
   materials/KV_Cr_CN6/runs/A_pbeu_relax_scf_nscf_Ugrid/KVCr_LCM.in \
   materials/KV_Cr_CN6/runs/A_pbeu_relax_scf_nscf_Ugrid/KVCr_LCM_nscf.in \
@@ -21,7 +21,7 @@ Give an scf input before the nscf input that reads it. Each pair shares a prefix
 
 Compare your results with the originals in two ways:
 
-- run `python tools/verify.py --repro reproduce/results/local`, which checks every ledger claim your outputs cover;
+- run `python3 tools/verify.py --repro reproduce/results/local`, which checks every ledger claim your outputs cover;
 - open your `.repro.out` files with `tools/qe_parse.py`.
 
 ```python
@@ -45,14 +45,14 @@ Approximate cost on 32 cores:
 ```bash
 pip install modal && modal setup
 modal run reproduce/modal_repro.py --case all        # or kvcr_pbeu, kvcr_hse, ybmfo_stack_U44, kvcr_pbeu_sssp
-python tools/verify.py --repro
+python3 tools/verify.py --repro
 ```
 
 The script does four things:
 
 - builds a fresh image with conda-forge QE 7.5, with no campaign code;
 - downloads the pseudopotentials from their public sources;
-- ships them to the container, where their md5 sums are checked;
+- ships them to the container, where their sha256 and md5 sums are checked;
 - runs the inputs and writes the outputs to `reproduce/results/<case>/`.
 
 **Pitfall we hit:** the container platform sets `OMP_NUM_THREADS` to the core count. With an OpenMP-enabled QE build, 32 MPI ranks then start 32 threads each, which makes runs about 50× slower. Both scripts force `OMP_NUM_THREADS=1`.

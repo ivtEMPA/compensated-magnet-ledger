@@ -6,18 +6,19 @@
 #   bash rerun_torder.sh [n_bootstrap]     (default 3; the recorded run used 30)
 #
 # Recorded: T_order = 915 / 965 / 915 K (L = 8 / 12 / 16), headline 950 (+250/-150) K.
-# Needs numpy and numba. Takes roughly 10-30 min on a laptop.
+# Needs numpy and numba. Takes roughly 10-30 min on a laptop. Set PYTHON to use an interpreter other than python3.
 set -euo pipefail
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 NBOOT="${1:-3}"
+PY="${PYTHON:-python3}"
 TMP="$(mktemp -d)"
+trap 'rm -rf "$TMP"' EXIT
 cp "$HERE/torder.py" "$HERE/mc_ce.py" "$HERE/ce2_YBMFO.json" "$TMP/"
-( cd "$TMP" && python torder.py ce2_YBMFO.json E_PM_best_bw_bayes best --boot "$NBOOT" )
+( cd "$TMP" && "$PY" torder.py ce2_YBMFO.json E_PM_best_bw_bayes best --boot "$NBOOT" )
 cp "$TMP/torder_YBMFO_E_PM_best_bw_bayes.json" "$HERE/rerun_torder_YBMFO_E_PM_best_bw_bayes.json"
-python - "$HERE/rerun_torder_YBMFO_E_PM_best_bw_bayes.json" "$HERE/torder_YBMFO_E_PM_best_bw_bayes.json" <<'EOF'
+"$PY" - "$HERE/rerun_torder_YBMFO_E_PM_best_bw_bayes.json" "$HERE/torder_YBMFO_E_PM_best_bw_bayes.json" <<'EOF'
 import json, sys
 new, old = (json.load(open(p)) for p in sys.argv[1:3])
 print("re-run  T_peak by L:", new["Tpeak"], " T_order(L=16) =", new["T_order_K"], "K")
 print("recorded T_peak by L:", old["Tpeak"], " T_order(L=16) =", old["T_order_K"], "K")
 EOF
-rm -rf "$TMP"

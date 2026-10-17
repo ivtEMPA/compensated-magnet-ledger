@@ -7,7 +7,7 @@ every recorded energy matches the output it came from, and recomputes the hull d
 (lowest-energy mix of competing phases at fixed Y:Ba:Mn:Fe:O, as in the agents' hull_post.py). Only numpy is
 needed.
 
-    python tools/crosscheck_raw.py
+    python3 tools/crosscheck_raw.py
 """
 import glob
 import json

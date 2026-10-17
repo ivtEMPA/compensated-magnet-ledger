@@ -1,6 +1,6 @@
 """Build the web version of the blog post.
 
-    python docs/build_page.py            -> docs/blog.html (page fragment, as published) and docs/index.html (full page)
+    python3 docs/build_page.py            -> docs/blog.html (page fragment, as published) and docs/index.html (full page)
 
 Numbers come from ledger/claims.csv (written by tools/verify.py --write-ledger) and, for the re-run table, from the
 outputs in reproduce/results/ (parsed with tools/qe_parse.py). Figures come from docs/figures.py."""
@@ -430,13 +430,13 @@ BODY = r"""
     <h3>1. Check the arithmetic: seconds, on a laptop</h3>
     <p>Recompute {{NRAW}} numbers directly from the raw outputs and check the rest against the included scripts' results and recorded analysis files. Today it reports {{NPASS}} pass and {{NFAIL}} fail.</p>
 <pre data-copy><code>pip install numpy
-python tools/verify.py</code></pre>
+python3 tools/verify.py</code></pre>
   </div>
   <div class="level">
     <h3>2. Re-run the models: minutes, on a laptop</h3>
     <p>Redo the magnetic-ordering simulation (recorded 417 K; the re-run gives 414 K) and the checkerboard-melting simulation that rules out YBaMnFeO₅ (it reproduces the recorded 915–965 K exactly).</p>
 <pre data-copy><code>pip install numpy pymatgen numba
-python materials/YBaMnFeO5/exchange_fit_and_Neel_T/rerun_fit_and_mc.py
+python3 materials/YBaMnFeO5/exchange_fit_and_Neel_T/rerun_fit_and_mc.py
 bash   materials/YBaMnFeO5/cation_order_cluster_expansion/rerun_torder.sh 3</code></pre>
   </div>
   <div class="level">

@@ -7,8 +7,8 @@ directly from the raw pw.x outputs stored in this repository:
 This is the same procedure as the campaign scripts fit110.py and mc110.py (kept next to this file), with the
 energies read from the raw outputs instead of an intermediate results file.
 
-usage:  python rerun_fit_and_mc.py            (full: L = 6, 8, 10; 12000 sweeps; a few minutes with numba)
-        python rerun_fit_and_mc.py --quick    (fewer sweeps; T_N to within ~10-20 K)
+usage:  python3 rerun_fit_and_mc.py            (full: L = 6, 8, 10; 12000 sweeps; a few minutes with numba)
+        python3 rerun_fit_and_mc.py --quick    (fewer sweeps; T_N to within ~10-20 K)
 needs:  numpy, pymatgen, numba
 """
 import json

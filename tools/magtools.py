@@ -1,5 +1,8 @@
-# Copied unchanged from the campaign library (infra/lib/magtools.py) so that the exchange fit and Monte Carlo
+# Copied from the campaign library (infra/lib/magtools.py) so that the exchange fit and Monte Carlo
 # used for YBaMnFeO5 can be re-run from this repository. Only fit_J, mc_scan and their helpers are used here.
+# Changed on 2026-10-17, in mc_scan only: U4 now uses the normalization for 3-component spins (it used the
+# scalar one, 1 - <m^4>/(3<m^2>^2)), and two dead lines were removed. U4 changes by an affine map that is the
+# same at every L and T, so the Binder crossings, and hence T_N, are unchanged.
 """
 magtools: collinear magnetic-configuration enumeration, Heisenberg fitting, and classical Monte Carlo.
 
@@ -237,14 +240,12 @@ def mc_scan(NB, JJ, pattern, temps, nsweep=4000, nequil=2000, Dz=0.0, seed=1):
     N = NB.shape[0]
     S = np.zeros((N, 3)); S[:, 2] = np.asarray(pattern, float)
     out = []
-    for k, T in enumerate(sorted(temps, reverse=True)[::-1]):
-        pass
-    S = np.zeros((N, 3)); S[:, 2] = np.asarray(pattern, float)
     for k, T in enumerate(sorted(temps)):  # heat from ordered state
         E, E2, M, M2, M4 = _mc_run(S, NB, JJ, Dz, T, nsweep, nequil, np.asarray(pattern, float), seed + k)
         C = (E2 - E * E) / (KB_MEV * T * T) / N
         chi = N * (M2 - M * M) / (KB_MEV * T)
-        U4 = 1 - M4 / (3 * M2 * M2) if M2 > 0 else 0
+        # Binder cumulant for an n = 3 component order parameter: 0 for Gaussian disorder, 1 for full order
+        U4 = 2.5 - 1.5 * M4 / (M2 * M2) if M2 > 0 else 0
         out.append({"T": float(T), "E": E / N, "C": C, "M": M, "chi": chi, "U4": U4})
     return out
 

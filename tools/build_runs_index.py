@@ -5,7 +5,7 @@ magnetisation and convergence of its output.
 hybrid (HSE06) runs, the outer exact-exchange loop also converged (QE prints a '!!' total energy). It is 'n/a' for
 nscf and bands runs, which are not self-consistent, and empty when no output is included.
 
-    python tools/build_runs_index.py
+    python3 tools/build_runs_index.py
 """
 import csv
 import json
@@ -28,6 +28,23 @@ def _converged(calc, r):
     if calc in ("relax", "vc-relax"):
         return bool(r["converged"] and r["bfgs_converged"])
     return bool(r["converged"])
+
+
+def _kpoints(t):
+    """'automatic' -> the mesh line; 'gamma' -> 'gamma'; an explicit list -> 'N points (crystal)' etc."""
+    m = re.search(r"^[ \t]*K_POINTS[ \t]*[({]?[ \t]*(\w*)", t, re.M | re.I)
+    if not m:
+        return ""
+    kind = m.group(1).lower() or "tpiba"
+    rest = t[m.end():].splitlines()[1:]
+    nxt = rest[0].strip() if rest else ""
+    if kind == "gamma":
+        return "gamma"
+    if kind == "automatic":
+        return nxt
+    return f"{nxt} points ({kind})"
+
+
 rows = []
 for mat in ("KV_Cr_CN6", "YBaMnFeO5"):
     for d in sorted((ROOT / "materials" / mat / "runs").iterdir()):
@@ -43,11 +60,12 @@ for mat in ("KV_Cr_CN6", "YBaMnFeO5"):
                 r, out_path = {}, ""
             t = inp.read_text(errors="ignore")
             g = lambda pat: (m.group(1) if (m := re.search(pat, t)) else "")
-            kp = t.split("K_POINTS")[1].splitlines()[1].strip() if "K_POINTS" in t else ""
+            kp = _kpoints(t)
+            hse = re.search(r"input_dft\s*=\s*['\"]hse", t, re.I)
             rows.append({
                 "material": mat, "run_folder": d.name, "input": str(inp.relative_to(ROOT)), "output": out_path,
                 "calculation": g(r"calculation\s*=\s*'(\S+)'"),
-                "functional": "HSE06" if "input_dft = 'hse'" in t else ("PBE+U" if "HUBBARD" in t else ("PBE" if "&SYSTEM" in t else "")),
+                "functional": "HSE06" if hse else ("PBE+U" if "HUBBARD" in t else ("PBE" if "&SYSTEM" in t else "")),
                 "hubbard_U_eV": ";".join(f"{a}={b}" for a, b in re.findall(r"U\s+(\S+)-\S+\s+([\d.]+)", t)),
                 "ecutwfc_Ry": g(r"ecutwfc\s*=\s*([\d.]+)"), "nat": g(r"nat\s*=\s*(\d+)"), "kpoints": kp,
                 "q_mesh": "x".join(g(rf"nqx{i}\s*=\s*(\d+)") for i in (1, 2, 3)) if "nqx1" in t else "",

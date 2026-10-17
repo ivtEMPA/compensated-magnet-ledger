@@ -78,16 +78,17 @@ L = ["# Independent re-runs: results",
      "**Pseudopotential check.** Every PseudoDojo file used by these materials matched the md5 sum of the file used in the original runs:",
      ""]
 for c, v in md5.items():
-    if c != "kvcr_pbeu_sssp" and v.get("md5_check"):
-        bad = [x for x in v["md5_check"] if "DIFFERS" in x or "MISSING" in x]
-        L.append(f"- `{c}`: {len(v['md5_check'])} files checked, {'all identical' if not bad else 'MISMATCH: ' + '; '.join(bad)}")
+    chk = v.get("pseudo_check") or v.get("md5_check")  # md5_check: runs made before sha256 sums were added
+    if c != "kvcr_pbeu_sssp" and chk:
+        bad = [x for x in chk if "DIFFERS" in x or "MISSING" in x]
+        L.append(f"- `{c}`: {len(chk)} files checked, {'all identical' if not bad else 'MISMATCH: ' + '; '.join(bad)}")
         break
 L += ["", "## Reproduction (same inputs, same pseudopotentials)", "", "| Calculation | Quantity | Original run | Independent re-run |", "|---|---|---|---|"]
 L += [f"| {a_} | {b_} | {c_} | {d_} |" for a_, b_, c_, d_ in rows]
 L += ["",
       "Differences in the last digits come from parallelisation and random starting wavefunctions. They are far below the precision any claim relies on.",
       "",
-      "Check it yourself: `python tools/verify.py --repro`.",
+      "Check it yourself: `python3 tools/verify.py --repro`.",
       ""]
 if sssp_rows:
     L += ["## Robustness: a different pseudopotential family (not a reproduction)", "",

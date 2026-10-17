@@ -3,7 +3,7 @@
 What it does, per case:
   1. builds a fresh container image with Quantum ESPRESSO 7.5 from conda-forge (no campaign code, no campaign files);
   2. downloads the pseudopotentials from their public source (on your machine), ships them to the container
-     and checks their md5 sums there against reproduce/pseudo_md5.txt;
+     and checks their sha256 and md5 sums there against reproduce/pseudo_checksums.txt;
   3. runs pw.x on the input files stored in this repository (only pseudo_dir/outdir are rewritten);
   4. writes the outputs to reproduce/results/<case>/ (and keeps a copy on the Modal volume `lcm-ledger-repro`).
 
@@ -11,7 +11,7 @@ Usage (needs a Modal account; `pip install modal`):
     modal run reproduce/modal_repro.py --case kvcr_pbeu
     modal run reproduce/modal_repro.py --case all
 Then check the numbers with:
-    python tools/verify.py --repro
+    python3 tools/verify.py --repro
 
 Without Modal, the same thing by hand: reproduce/get_pseudos.sh + reproduce/run_qe.sh (see reproduce/README.md).
 """
@@ -91,7 +91,7 @@ def _rewrite(text, pseudo_dir, outdir, sssp=None):
 
 
 @app.function(image=image, cpu=32, memory=65536, volumes={"/out": vol}, timeout=8 * 3600)
-def run_case(case: str, files: dict, md5_table: str, cpu: int, nk: int, pseudos: str, archives: dict) -> dict:
+def run_case(case: str, files: dict, sums_table: str, cpu: int, nk: int, pseudos: str, archives: dict) -> dict:
     import hashlib, json, os, re, subprocess
     t_start = time.time()
     work = pathlib.Path("/tmp/work"); work.mkdir(parents=True, exist_ok=True)
@@ -104,13 +104,13 @@ def run_case(case: str, files: dict, md5_table: str, cpu: int, nk: int, pseudos:
         for f in list(pdir.rglob("*.upf")):
             if f.parent != pdir:
                 f.rename(pdir / f.name)
-        for row in md5_table.splitlines():
+        for row in sums_table.splitlines():
             if not row.strip() or row.startswith("#"):
                 continue
-            el, fn, want = row.split()[:3]
+            el, fn, want_md5, zval, want_sha = row.split()[:5]
             p = pdir / fn
-            got = hashlib.md5(p.read_bytes()).hexdigest() if p.exists() else "MISSING"
-            log.append(f"{fn:8s} {'ok' if got == want else 'DIFFERS'} {got}")
+            got = (hashlib.sha256(p.read_bytes()).hexdigest(), hashlib.md5(p.read_bytes()).hexdigest()) if p.exists() else None
+            log.append(f"{fn:8s} {'MISSING' if got is None else 'ok' if got == (want_sha, want_md5) else 'DIFFERS'} sha256 {got and got[0]}")
     else:  # SSSP 1.3 efficiency (robustness check with a different pseudopotential family)
         (pdir / "s.tgz").write_bytes(archives["sssp_tgz"])
         subprocess.run(f"cd {pdir} && tar xzf s.tgz && rm s.tgz", shell=True, check=True)
@@ -130,7 +130,7 @@ def run_case(case: str, files: dict, md5_table: str, cpu: int, nk: int, pseudos:
             got = hashlib.md5(fp.read_bytes()).hexdigest() if fp.exists() else "MISSING"
             log.append(f"{meta[e]['filename']} {'ok' if got == meta[e]['md5'] else 'DIFFERS'} {got}")
         log.append(f"SSSP efficiency 1.3: {sssp}")
-    results = {"case": case, "md5_check": log, "runs": []}
+    results = {"case": case, "pseudo_check": log, "runs": []}
     vdir = pathlib.Path("/out") / case
     vdir.mkdir(parents=True, exist_ok=True)
     for rel, txt in files.items():
@@ -166,22 +166,20 @@ def run_case(case: str, files: dict, md5_table: str, cpu: int, nk: int, pseudos:
 
 
 def _download(url, tries=3):
-    """Fetch a public archive on the local machine. Integrity is checked by md5 inside the container, so a
-    server with an incomplete TLS certificate chain (pseudo-dojo.org at the time of writing) is tolerated."""
-    import shutil, ssl, subprocess, tempfile, urllib.request
+    """Fetch a public archive on the local machine (TLS verified); the files are checked again inside the container."""
+    import shutil, subprocess, tempfile, urllib.request
     for i in range(tries):
         if shutil.which("curl"):
             with tempfile.NamedTemporaryFile() as tmp:
-                if subprocess.run(["curl", "-sSL", "--max-time", "300", url, "-o", tmp.name]).returncode == 0:
+                if subprocess.run(["curl", "-fsSL", "--max-time", "300", url, "-o", tmp.name]).returncode == 0:
                     data = pathlib.Path(tmp.name).read_bytes()
                     if data:
                         return data
-        for ctx in (None, ssl._create_unverified_context()):
-            try:
-                with urllib.request.urlopen(url, timeout=300, context=ctx) as r:
-                    return r.read()
-            except Exception as e:
-                print(f"download failed ({e}); retry {i + 1}/{tries}")
+        try:
+            with urllib.request.urlopen(url, timeout=300) as r:
+                return r.read()
+        except Exception as e:
+            print(f"download failed ({e}); retry {i + 1}/{tries}")
         time.sleep(5 * (i + 1))
     raise RuntimeError(f"could not download {url}")
 
@@ -189,7 +187,7 @@ def _download(url, tries=3):
 @app.local_entrypoint()
 def main(case: str = "kvcr_pbeu"):
     names = [n for n in CASES if n != "kvcr_hydrate_hse"] if case == "all" else case.split(",")
-    md5_table = (REPO / "reproduce" / "pseudo_md5.txt").read_text()
+    sums_table = (REPO / "reproduce" / "pseudo_checksums.txt").read_text()
     archives = {}
     if any(CASES[n]["pseudos"] == "dojo" for n in names):
         archives["dojo"] = _download(DOJO_URL)
@@ -202,7 +200,7 @@ def main(case: str = "kvcr_pbeu"):
         files = {rel: (REPO / rel).read_text() for rel in c["inputs"]}
         fn = run_case.with_options(cpu=c["cpu"], memory=2048 * c["cpu"], timeout=c.get("timeout", 8 * 3600))
         need = {"dojo": ["dojo"], "sssp": ["sssp_tgz", "sssp_json"]}[c["pseudos"]]
-        calls.append((name, fn.spawn(name, files, md5_table, c["cpu"], c["nk"], c["pseudos"], {k: archives[k] for k in need})))
+        calls.append((name, fn.spawn(name, files, sums_table, c["cpu"], c["nk"], c["pseudos"], {k: archives[k] for k in need})))
     for name, call in calls:
         try:
             res = call.get()
@@ -220,4 +218,4 @@ def main(case: str = "kvcr_pbeu"):
         summary = {k: v for k, v in res.items() if k != "runs"}
         summary["runs"] = [{k: r[k] for k in ("input", "rc", "seconds")} for r in res["runs"]]
         (dest / "summary.json").write_text(json.dumps(summary, indent=1))
-        print(f"[{name}] done in {res['total_seconds']} s; md5: {res['md5_check'][:3]}...")
+        print(f"[{name}] done in {res['total_seconds']} s; pseudopotentials: {res['pseudo_check'][:3]}...")

@@ -26,7 +26,12 @@ import numpy as np
 
 RY_EV = 13.605693122994
 BOHR_A = 0.529177210903
-_NUM = re.compile(r"-?\d+\.\d+")
+_NUM = re.compile(r"-?\d+\.\d+(?:[EeDd][-+]?\d+)?")
+
+
+def _float(s):
+    """float() that also reads Fortran 'D' exponents."""
+    return float(s.replace("D", "E").replace("d", "e"))
 
 
 def _lines(path):
@@ -111,15 +116,15 @@ def _parse_block(L, start, stop):
             continue
         if re.search(r"^\s+k =", l) and "bands (ev)" in l:
             kk = _NUM.findall(l.split("(")[0].split("=")[1])
-            spins[cur].append({"k": [float(x) for x in kk[:3]], "e": [], "o": [], "mode": "e"})
+            spins[cur].append({"k": [_float(x) for x in kk[:3]], "e": [], "o": [], "mode": "e"})
             continue
         if "occupation numbers" in l and spins.get(cur):
             spins[cur][-1]["mode"] = "o"; continue
         if spins.get(cur):
             nums = _NUM.findall(l)
-            if nums and not re.search(r"[a-zA-Z]", l):
+            if nums and not re.search(r"[a-zA-Z]", _NUM.sub("", l)):  # letters other than exponents: not an eigenvalue line
                 rec = spins[cur][-1]
-                (rec["e"] if rec["mode"] == "e" else rec["o"]).extend(float(x) for x in nums)
+                (rec["e"] if rec["mode"] == "e" else rec["o"]).extend(_float(x) for x in nums)
     return spins
 
 
@@ -164,6 +169,8 @@ def spin_windows(b):
         occd = b["occ"] > 0.5
     else:
         ef = b["fermi_eV"]
+        if ef is None:
+            raise ValueError("no occupations and no Fermi level / band-edge line in this output: cannot tell occupied states")
         if isinstance(ef, tuple):
             occd = np.stack([E[:, 0, :] < ef[0], E[:, 1, :] < ef[1]], axis=1)
         else:
@@ -193,7 +200,7 @@ def final_cell(path):
     for i, l in enumerate(L):
         if l.startswith("CELL_PARAMETERS"):
             unit = l
-            rows = [[float(x) for x in _NUM.findall(L[i + j])] for j in (1, 2, 3)]
+            rows = [[_float(x) for x in _NUM.findall(L[i + j])] for j in (1, 2, 3)]
             c = np.array(rows)
             if "alat" in unit:
                 m = re.search(r"alat=\s*([\d.]+)", unit)

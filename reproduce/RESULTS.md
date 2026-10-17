@@ -31,7 +31,7 @@ These were re-run on 2026-10-04 in a fresh cloud container (Modal) using `reprod
 
 Differences in the last digits come from parallelisation and random starting wavefunctions. They are far below the precision any claim relies on.
 
-Check it yourself: `python tools/verify.py --repro`.
+Check it yourself: `python3 tools/verify.py --repro`.
 
 ## Robustness: a different pseudopotential family (not a reproduction)
 

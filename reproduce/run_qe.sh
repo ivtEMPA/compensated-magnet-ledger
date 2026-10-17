@@ -8,7 +8,7 @@
 # materials/ untouched: for each <run folder>/X.in it writes OUT/<run folder>/X.repro.in with only
 # those two lines changed, runs it, and writes OUT/<run folder>/X.repro.out (OUT defaults to
 # reproduce/results/local, which is git-ignored). Check them with
-#   python tools/verify.py --repro reproduce/results/local
+#   python3 tools/verify.py --repro reproduce/results/local
 # Inputs are run in the order given, so give an scf input before the nscf input that reads it (they
 # share prefix and directory, hence outdir). The script stops at the first run that fails (non-zero
 # exit from pw.x, or no 'JOB DONE' in the output), so an nscf never runs on top of a failed scf.

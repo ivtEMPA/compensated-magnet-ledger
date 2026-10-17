@@ -1,9 +1,9 @@
 """Check every number in the ledger against the raw files in this repository.
 
-    python tools/verify.py                 # re-derive each claim from the raw pw.x outputs / data files
-    python tools/verify.py --repro         # same checks, but on the independent re-runs in reproduce/results/
-    python tools/verify.py --repro reproduce/results/local   # ... on your own re-runs from reproduce/run_qe.sh
-    python tools/verify.py --write-ledger  # regenerate ledger/claims.csv and the claim tables in LEDGER.md
+    python3 tools/verify.py                 # re-derive each claim from the raw pw.x outputs / data files
+    python3 tools/verify.py --repro         # same checks, but on the independent re-runs in reproduce/results/
+    python3 tools/verify.py --repro reproduce/results/local   # ... on your own re-runs from reproduce/run_qe.sh
+    python3 tools/verify.py --write-ledger  # regenerate ledger/claims.csv and the claim tables in LEDGER.md
 
 Tiers
     A   re-derived here from raw Quantum ESPRESSO output files (seconds, only numpy needed)
