@@ -6,3 +6,7 @@ pseudo/
 *.repro.out
 !reproduce/results/**/*.repro.in
 !reproduce/results/**/*.repro.out
+# your own re-runs: Level 2 (re-run scripts) and Level 3 (reproduce/run_qe.sh); recorded ones are in recorded_rerun/
+/materials/YBaMnFeO5/exchange_fit_and_Neel_T/rerun_result*.json
+/materials/YBaMnFeO5/cation_order_cluster_expansion/rerun_torder_*.json
+/reproduce/results/local/

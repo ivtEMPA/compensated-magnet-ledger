@@ -34,6 +34,8 @@ for mat in ("KV_Cr_CN6", "YBaMnFeO5"):
         if not d.is_dir():
             continue
         for inp in sorted(d.rglob("*.in")):
+            if inp.name.endswith(".repro.in"):  # left by older versions of reproduce/run_qe.sh
+                continue
             try:
                 r = parse_pw(resolve(inp.with_suffix(".out")))
                 out_path = str(resolve(inp.with_suffix(".out")).relative_to(ROOT))

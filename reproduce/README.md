@@ -13,19 +13,21 @@ NP=16 NK=8 PSEUDO=$PWD/pseudo bash reproduce/run_qe.sh \
   materials/KV_Cr_CN6/runs/A_pbeu_relax_scf_nscf_Ugrid/KVCr_FM.in
 ```
 
-`run_qe.sh` never edits the original input files. For each `X.in` it writes `X.repro.in`, which differs only in `pseudo_dir` and `outdir`, then runs it and writes `X.repro.out` next to the original.
+`run_qe.sh` never writes inside `materials/`. For each `<run folder>/X.in` it writes `reproduce/results/local/<run folder>/X.repro.in`, which differs only in `pseudo_dir` and `outdir`, then runs it and writes `X.repro.out` beside it. Set `OUT=...` to write somewhere else. `reproduce/results/local/` is git-ignored.
+
+The script stops at the first run that fails, meaning pw.x exits non-zero or its output has no `JOB DONE`. It exits non-zero, so an nscf never runs on top of a failed scf.
 
 Give an scf input before the nscf input that reads it. Each pair shares a prefix and a folder, so it shares a scratch directory.
 
 Compare your results with the originals in two ways:
 
-- run `python tools/verify.py` (originals);
+- run `python tools/verify.py --repro reproduce/results/local`, which checks every ledger claim your outputs cover;
 - open your `.repro.out` files with `tools/qe_parse.py`.
 
 ```python
 import sys; sys.path.insert(0, "tools")
 from qe_parse import parse_pw, last_bands, spin_windows
-print(spin_windows(last_bands("materials/KV_Cr_CN6/runs/A_pbeu_relax_scf_nscf_Ugrid/KVCr_LCM_nscf.repro.out")))
+print(spin_windows(last_bands("reproduce/results/local/A_pbeu_relax_scf_nscf_Ugrid/KVCr_LCM_nscf.repro.out")))
 ```
 
 Approximate cost on 32 cores:

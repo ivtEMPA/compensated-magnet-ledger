@@ -52,6 +52,8 @@ python materials/YBaMnFeO5/exchange_fit_and_Neel_T/rerun_fit_and_mc.py          
 bash   materials/YBaMnFeO5/cation_order_cluster_expansion/rerun_torder.sh 3         # recorded and re-run: 915 / 965 / 915 K
 ```
 
+Your outputs are written next to the scripts and are git-ignored. `tools/verify.py` then grades Y21, Y22 and Y25 on them. Until you run the scripts, it reads our own re-run from 2026-10-04 (`recorded_rerun/` folders), and its report says which file each value came from. A `--quick` run checks the fit (Y21), but its T_N is too coarse to grade Y22 at ±15 K.
+
 **Level 3: re-run the quantum-mechanical calculations (CPU hours, cluster or cloud).** Download the same pseudopotentials (md5-checked) and run the original input files with Quantum ESPRESSO 7.5:
 
 ```bash
@@ -61,6 +63,8 @@ NP=16 NK=8 PSEUDO=$PWD/pseudo bash reproduce/run_qe.sh \
   materials/KV_Cr_CN6/runs/A_pbeu_relax_scf_nscf_Ugrid/KVCr_LCM.in \
   materials/KV_Cr_CN6/runs/A_pbeu_relax_scf_nscf_Ugrid/KVCr_LCM_nscf.in
 ```
+
+The outputs go to `reproduce/results/local/`; check them with `python tools/verify.py --repro reproduce/results/local`.
 
 We did exactly this in a fresh cloud container for four sets of runs, and all 16 checked values match the originals; see [reproduce/RESULTS.md](reproduce/RESULTS.md). A fifth run took the agents' unconverged HSE06 water calculation, reproduced its first 12 cycles digit for digit, and carried it to convergence (`materials/KV_Cr_CN6/runs/F2_hse06_dihydrate_LCM_converged/`). There is also a one-command cloud version, `reproduce/modal_repro.py`.
 

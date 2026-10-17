@@ -2,13 +2,15 @@
 
     python tools/verify.py                 # re-derive each claim from the raw pw.x outputs / data files
     python tools/verify.py --repro         # same checks, but on the independent re-runs in reproduce/results/
+    python tools/verify.py --repro reproduce/results/local   # ... on your own re-runs from reproduce/run_qe.sh
     python tools/verify.py --write-ledger  # regenerate ledger/claims.csv and the claim tables in LEDGER.md
 
 Tiers
     A   re-derived here from raw Quantum ESPRESSO output files (seconds, only numpy needed)
     B   read from a recorded analysis file in this repository (the script that produced it is included)
     L2  re-run end to end by an included script (exchange fit + Monte Carlo, cluster-expansion Monte Carlo);
-        the check here reads that script's output if you have run it, otherwise the recorded file
+        the check here reads that script's output if you have run it, otherwise our recorded re-run (recorded_rerun/);
+        the report says which
     E   experimental fact from the literature (not checkable by computation; cited)
 """
 from __future__ import annotations
@@ -104,12 +106,35 @@ def ugrid_unipolar():
     return all(win(KA + f"KVCr_{u}LCM_nscf.out", "unipolar") for u in ("", "U2_2_", "U2_4_", "U4_2_", "U4_4_"))
 
 
+def resolve_exists(p):
+    try:
+        resolve(p)
+        return True
+    except FileNotFoundError:
+        return False
+
+
 def text_has(rel, s):
     return s in (ROOT / rel).read_text()
 
 
 CE = "materials/YBaMnFeO5/cation_order_cluster_expansion/"
 EX = "materials/YBaMnFeO5/exchange_fit_and_Neel_T/"
+
+# L2 claims read your own re-run output (untracked, written by the re-run scripts) when it exists, otherwise the
+# re-run we recorded on 2026-10-04 (recorded_rerun/). L2_SOURCE remembers which file each value came from.
+L2_SOURCE: dict = {}
+
+
+def _l2(cid, fresh, recorded):
+    have = [r for r in fresh if (ROOT / r).exists()]
+    rel = max(have, key=lambda r: (ROOT / r).stat().st_mtime) if have else first_existing(*recorded)
+    L2_SOURCE[cid] = rel
+    return rel
+
+
+def _exfit(cid):
+    return _l2(cid, [EX + "rerun_result.json", EX + "rerun_result_quick.json"], [EX + "recorded_rerun/rerun_result.json"])
 
 # ---- the ledger ------------------------------------------------------------------------------------------
 # expected = the value stated in the agents' dossiers (or 'new' if first computed for this ledger)
@@ -278,14 +303,10 @@ CLAIMS = [
     dict(id="Y21", mat="YBaMnFeO5", tier="L2", what="Exchange fit from 25 raw energies: in-plane Mn-O-Fe coupling J_ip", unit="meV",
          expected=-32.6, tol=0.1, method="least squares, 10 pair classes, 22 'clean' configurations (rerun_fit_and_mc.py)",
          files=[EX + "rerun_fit_and_mc.py", Y + "I_pbeu_exchange_fit_configs/", Y + "H_pbeu_stacking_vs_U/U44_*"],
-         f=lambda: jget(first_existing(EX + "rerun_result.json", EX + "rerun_result_quick.json"), "J_meV", "ip")
-         if (ROOT / EX / "rerun_result.json").exists() or (ROOT / EX / "rerun_result_quick.json").exists()
-         else dict(zip(jget(EX + "jfit110/fits.json", "clean_M<=10.5_10", "classes"), jget(EX + "jfit110/fits.json", "clean_M<=10.5_10", "J_meV")))["ip"],
-         repro=None),
+         f=lambda: jget(_exfit("Y21"), "J_meV", "ip"), repro=None),
     dict(id="Y22", mat="YBaMnFeO5", tier="L2", what="Neel temperature, classical Monte Carlo on the fitted model (Binder crossings, L = 6/8/10)", unit="K",
          expected=417, tol=15, method="rerun_fit_and_mc.py (full mode)", files=[EX + "rerun_fit_and_mc.py", EX + "jfit110/mc_clean_Mle10.5_10.json"],
-         f=lambda: float(np.mean(jget(EX + "rerun_result.json", "binder_crossings_K"))) if (ROOT / EX / "rerun_result.json").exists()
-         else float(np.mean(jget(EX + "jfit110/mc_clean_Mle10.5_10.json", "binder_first_crossings"))), repro=None),
+         f=lambda: float(np.mean(jget(_exfit("Y22"), "binder_crossings_K"))), repro=None),
     dict(id="Y23", mat="YBaMnFeO5", tier="B", what="Calibrated Neel temperature: Y22 x (measured/simulated ratio for YFeO3 with the same protocol, 1.17-1.19)",
          unit="K", expected=490, tol=15, method="T_MC x mean f_MC(YFeO3); see Neel_T_calibration/",
          files=["materials/YBaMnFeO5/analysis_data/calibration_summary.json"],
@@ -303,7 +324,9 @@ CLAIMS = [
     dict(id="Y25", mat="YBaMnFeO5", tier="L2", what="DECISIVE: Mn/Fe order-disorder temperature from the paramagnetic cluster expansion (C peak, L = 16)",
          unit="K", expected=915, tol=60, method="canonical MC of a fitted cluster expansion (21 arrangements, 96 DFT runs); rerun_torder.sh",
          files=[CE + "ce2_YBMFO.json", CE + "torder.py", CE + "rerun_torder.sh"],
-         f=lambda: jget(first_existing(CE + "rerun_torder_YBMFO_E_PM_best_bw_bayes.json", CE + "torder_YBMFO_E_PM_best_bw_bayes.json"), "T_order_K"),
+         f=lambda: jget(_l2("Y25", [CE + "rerun_torder_YBMFO_E_PM_best_bw_bayes.json"],
+                            [CE + "recorded_rerun/rerun_torder_YBMFO_E_PM_best_bw_bayes.json", CE + "torder_YBMFO_E_PM_best_bw_bayes.json"]),
+                        "T_order_K"),
          repro=None),
     dict(id="Y26", mat="YBaMnFeO5", tier="B", what="Headline order-disorder temperature with uncertainty (bootstrap + model variants)", unit="K",
          expected="950 (+250/-150)", tol=None, method="ord2_summary.json", files=[CE + "ord2_summary.json"],
@@ -318,9 +341,9 @@ CLAIMS = [
 CLAIMS_BY_ID = {c["id"]: c for c in CLAIMS}
 
 
-def _val_repro(c):
+def _val_repro(c, repro_dir=None):
     case, spec, kind = c["repro"]
-    base = f"reproduce/results/{case}/"
+    base = f"reproduce/results/{case}/" if repro_dir is None else repro_dir.rstrip("/") + "/"
     if kind == "dE":
         a, b, n = spec
         return (parse_pw(resolve(ROOT / (base + b)))["energy_eV"] - parse_pw(resolve(ROOT / (base + a)))["energy_eV"]) / n * 1000.0
@@ -355,17 +378,28 @@ def _fmt(v):
     return str(v)
 
 
-def run(repro=False):
+def _repro_files(c, repro_dir):
+    _, spec, kind = c["repro"]
+    return [ROOT / repro_dir / s for s in (spec[:2] if kind == "dE" else [spec])]
+
+
+def run(repro=False, repro_dir=None):
     rows = []
     for c in CLAIMS:
         if repro and not c["repro"]:
             continue
+        # your own re-runs (repro_dir) usually cover only some cases: skip the claims whose outputs you did not make
+        if repro_dir is not None and not all(resolve_exists(p) for p in _repro_files(c, repro_dir)):
+            continue
         try:
             if repro:
-                val = _val_repro(c)
+                val = _val_repro(c, repro_dir)
             else:
                 val = c["f"]() if c["f"] else None
             st = _status(val, c)
+            # quick Monte Carlo is too coarse for the 15 K tolerance of Y22 (and Y23, which scales it)
+            if c["id"] in ("Y22", "Y23") and L2_SOURCE.get("Y22", "").endswith("_quick.json"):
+                st = "QUICK"
         except FileNotFoundError as e:
             val, st = None, f"MISSING ({pathlib.Path(str(e)).name})"
         except Exception as e:  # pragma: no cover
@@ -383,7 +417,24 @@ def print_table(rows, title):
     miss = sum(1 for _, _, x in rows if x.startswith(("MISSING", "ERROR")))
     other = len(rows) - n["PASS"] - n["FAIL"] - miss
     print(f"\n{n['PASS']} pass, {n['FAIL']} fail, {miss} missing input files, {other} not computable here (experiment / recorded-only)")
+    if n["PASS"] + n["FAIL"] + miss == 0:
+        print("nothing was checked: no output files found")
+        return False
     return n["FAIL"] == 0 and miss == 0
+
+
+def print_l2_sources():
+    if not L2_SOURCE:
+        return
+    print("\nL2 claims were read from:")
+    for cid, rel in sorted(L2_SOURCE.items()):
+        if "/recorded_rerun/" in rel or "/rerun_" not in rel:
+            how = "recorded re-run (2026-10-04); re-run the script to check it yourself"
+        elif rel.endswith("_quick.json"):
+            how = "YOUR re-run, quick mode (T_N not graded; run without --quick)"
+        else:
+            how = "YOUR re-run"
+        print(f"  {cid:4s} {how:70s} {rel}")
 
 
 def write_ledger(rows):
@@ -417,10 +468,14 @@ def write_ledger(rows):
 
 if __name__ == "__main__":
     if "--repro" in sys.argv:
-        ok = print_table(run(repro=True), "Independent re-runs (reproduce/results) vs recorded values")
+        i = sys.argv.index("--repro")
+        repro_dir = sys.argv[i + 1] if i + 1 < len(sys.argv) and not sys.argv[i + 1].startswith("--") else None
+        ok = print_table(run(repro=True, repro_dir=repro_dir),
+                         f"Independent re-runs ({repro_dir or 'reproduce/results'}) vs recorded values")
     else:
         rows = run()
         ok = print_table(rows, "Ledger claims re-derived from the raw files in this repository")
+        print_l2_sources()
         if "--write-ledger" in sys.argv:
             write_ledger(rows)
     sys.exit(0 if ok else 1)
