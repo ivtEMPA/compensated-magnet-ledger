@@ -5,7 +5,7 @@ This repository holds the data behind a blog post about two candidate **room-tem
 - **YBaMnFeO₅**: a new design. On paper it is nearly ideal. However, our own calculations suggest the atomic ordering it needs may be hard to reach with standard synthesis.
 - **KV[Cr(CN)₆]**: a Prussian-blue-type magnet first made in 1999; its only reported sample, a hydrated powder, orders at 376 K. Our calculations say it already has this electronic structure. Its zero net moment was designed in (1999), and its spin-sorted band edges are already visible in a 2008 hybrid-functional calculation that did not comment on them. We point them out, put numbers on them and test how robust they are (LEDGER caveat 11).
 
-Everything here was computed by a team of Claude Opus 5.5 agents (Anthropic), which ran density functional theory (DFT) calculations on cloud computers. This repository makes the numbers checkable: the inputs and raw outputs, the scripts, and a claim-by-claim checker. Of the 61 claims in the ledger, 52 are recomputed directly from raw outputs, 3 by re-running included scripts, 3 are read from recorded analysis files, and 3 are experimental or literature values.
+Everything here was computed by a team of Claude Opus 5.5 agents (Anthropic), which ran density functional theory (DFT) calculations on cloud computers. This repository makes the numbers checkable: the inputs and raw outputs, the scripts, and a claim-by-claim checker. Of the 67 claims in the ledger, 58 are recomputed directly from raw outputs, 3 by re-running included scripts, 3 are read from recorded analysis files, and 3 are experimental or literature values.
 
 **Read the blog post:** [BLOG.md](BLOG.md). A designed web version with the same text and diagrams is in [`docs/index.html`](docs/index.html); turn on GitHub Pages for the `/docs` folder to serve it.
 
@@ -40,7 +40,7 @@ Re-reading every raw output, and an outside reader's literature check, turned up
 
 ```bash
 pip install numpy
-python3 tools/verify.py            # 58 pass, 0 fail, 3 not computable (experiment/literature) as of 2026-10-04
+python3 tools/verify.py            # 64 pass, 0 fail, 3 not computable (experiment/literature) as of 2026-10-19
 python3 tools/crosscheck_raw.py    # the cation-ordering and hull energies against their raw outputs
 ```
 
@@ -66,7 +66,7 @@ NP=16 NK=8 PSEUDO=$PWD/pseudo bash reproduce/run_qe.sh \
 
 The outputs go to `reproduce/results/local/`; check them with `python3 tools/verify.py --repro reproduce/results/local`.
 
-We did exactly this in a fresh cloud container for four sets of runs, and all 16 checked values match the originals; see [reproduce/RESULTS.md](reproduce/RESULTS.md). A fifth run took the agents' unconverged HSE06 water calculation, reproduced its first 12 cycles digit for digit, and carried it to convergence (`materials/KV_Cr_CN6/runs/F2_hse06_dihydrate_LCM_converged/`). There is also a one-command cloud version, `reproduce/modal_repro.py`.
+We did exactly this in a fresh cloud container for four sets of runs, and all 16 checked values match the originals; see [reproduce/RESULTS.md](reproduce/RESULTS.md). A fifth run took the agents' unconverged HSE06 water calculation, reproduced its first 12 cycles digit for digit, and carried it to convergence (`materials/KV_Cr_CN6/runs/F2_hse06_dihydrate_LCM_converged/`). On 2026-10-19 the same procedure, on a 10-core workstation, reproduced the KV[Cr(CN)₆] PBE+U runs and then extended their U grid down to U = 1 eV and plain PBE (`materials/KV_Cr_CN6/runs/R_pbeu_low_U_U0_U1/`, claims K09b–K12c): the zero net moment and same-spin band edges hold at every U from 0 to 4 eV. There is also a one-command cloud version, `reproduce/modal_repro.py`.
 
 ## What is in here
 
@@ -74,7 +74,7 @@ We did exactly this in a fresh cloud container for four sets of runs, and all 16
 BLOG.md                         the blog post (plain language)
 LEDGER.md                       every claim -> files -> script -> status, plus all known caveats
 ledger/claims.csv               the same claims, machine-readable
-ledger/runs.csv                 index of all 876 included inputs (868 pw.x runs + 8 post-processing), with convergence flags
+ledger/runs.csv                 index of all 883 included inputs (875 pw.x runs + 8 post-processing), with convergence flags
 ledger/harvest_manifest.json    provenance: original storage path and md5 of every raw file
 tools/verify.py                 Level-1 checker (numpy only)
 tools/crosscheck_raw.py         ordering and hull energies vs their raw outputs; recomputes the hull distance

@@ -383,7 +383,7 @@ BODY = r"""
 <ul>
   <li><strong>zero net spin</strong> in the perfect crystal {{L:K02,K13}}, with a symmetry analysis classifying it as this type of magnet {{L:K29}};</li>
   <li>a <strong>band gap of about 2.1 eV</strong> {{L:K14}};</li>
-  <li><strong>both band edges carrying the same spin</strong> {{L:K15}}, with windows of <strong>2.6 eV</strong> for holes and <strong>1.6 eV</strong> for electrons {{L:K16,K17}}, 60 to 100 times the room-temperature jiggle. The cheaper method agrees on the picture, with somewhat smaller windows at every value of U tried {{L:K07,K08,K09,K10,K11}};</li>
+  <li><strong>both band edges carrying the same spin</strong> {{L:K15}}, with windows of <strong>2.6 eV</strong> for holes and <strong>1.6 eV</strong> for electrons {{L:K16,K17}}, 60 to 100 times the room-temperature jiggle. The cheaper method agrees on the picture, with somewhat smaller windows at every value of U tried, from 0 to 4 eV {{L:K07,K08,K09,K10,K11,K09b,K10b,K11b}};</li>
   <li>the cyanide bridge <strong>fixing which metal sits where</strong>, because chromium strongly prefers the carbon end and vanadium the nitrogen end. That is exactly the chemical enforcement YBaMnFeO₅ lacked.</li>
 </ul>
 <p>The fact that vanadium and chromium are different elements is what makes the windows large. When the agents ran the same structure with chromium on both sites, Cr[Cr(CN)₆], the windows shrank to 0.1–0.4 eV and the two band edges took opposite spins {{L:K27,K28}}.</p>

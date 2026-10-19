@@ -147,7 +147,7 @@ It also records the mistakes the agents caught and corrected along the way, and 
 
 There are three levels of checking:
 
-1. **Check the arithmetic, in a few seconds.** `python3 tools/verify.py` recomputes 52 numbers directly from the raw outputs and checks 6 more against the included scripts' results and recorded analysis files. Today it reports 58 pass and 0 fail.
+1. **Check the arithmetic, in a few seconds.** `python3 tools/verify.py` recomputes 58 numbers directly from the raw outputs and checks 6 more against the included scripts' results and recorded analysis files. Today it reports 64 pass and 0 fail.
 2. **Re-run the models, in minutes on a laptop.** Scripts redo the magnetic-ordering-temperature simulation (the re-run gives 414 K against the recorded 417 K) and the checkerboard-melting simulation that rules out YBaMnFeO₅ (it reproduces the recorded 915–965 K exactly).
 3. **Re-run the quantum calculations from scratch.** The repository includes the exact pseudopotential files' checksums and scripts to download and run everything. We did this ourselves in a fresh cloud machine for a representative set of calculations; see `reproduce/RESULTS.md`.
 

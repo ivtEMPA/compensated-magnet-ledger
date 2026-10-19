@@ -29,6 +29,8 @@ from qe_parse import final_cell, last_bands, parse_pw, resolve, spin_windows  # 
 K = "materials/KV_Cr_CN6/runs/"
 Y = "materials/YBaMnFeO5/runs/"
 KA = K + "A_pbeu_relax_scf_nscf_Ugrid/"
+KR = K + "R_pbeu_low_U_U0_U1/"
+LOWU = ("U0_0", "U1_1")
 
 _cache: dict = {}
 
@@ -88,6 +90,10 @@ def ugrid(key, fn):
     return fn(vals)
 
 
+def lowu(key, fn):
+    return fn([win(KR + f"KVCr_{u}_LCM_nscf.out", key) for u in LOWU])
+
+
 def jget(rel, *path):
     d = _json(rel)
     for p in path:
@@ -140,6 +146,7 @@ def _exfit(cid):
 # expected = the value stated in the agents' dossiers (or 'new' if first computed for this ledger)
 PBEU_K = "QE 7.5, PBE+U (ortho-atomic, U_V = U_Cr = 3 eV), PseudoDojo NC, 110 Ry"
 HSE_K = "QE 7.5, HSE06 (no U), 90 Ry, q-mesh 2x2x2, k 4x4x4"
+LOWU_K = "QE 7.5, PBE+U (ortho-atomic, U_V = U_Cr = 1 eV) and PBE, PseudoDojo NC, 110 Ry, U = 3 eV geometry, nscf 8x8x8 (new numbers, 2026-10-19)"
 PBEU_Y = "QE 7.5, PBE+U (ortho-atomic, U_Mn = U_Fe = 4 eV), PseudoDojo NC"
 HSE_Y = "QE 7.5, HSE06 (no U), 75 Ry on the 110-Ry geometry, q-mesh 2x2x1"
 
@@ -180,6 +187,22 @@ CLAIMS = [
          unit="meV", expected=152.2, tol=0.2, method=PBEU_K, files=[KA + "KVCr_LCM.out", KA + "KVCr_FM.out"],
          f=lambda: dE_ion(KA + "KVCr_LCM.out", KA + "KVCr_FM.out", 2),
          repro=("kvcr_pbeu", ("A_pbeu_relax_scf_nscf_Ugrid/KVCr_LCM.repro.out", "A_pbeu_relax_scf_nscf_Ugrid/KVCr_FM.repro.out", 2), "dE")),
+    dict(id="K09b", mat="KV[Cr(CN)6]", tier="A", what="U grid extended down to U_V = U_Cr = 1 eV and plain PBE (U = 0), computed for this ledger: smallest hole window",
+         unit="eV", expected=1.37, tol=0.01, method=LOWU_K, files=[KR + "KVCr_U*_LCM_nscf.out"], f=lambda: lowu("win_VB", min), repro=None),
+    dict(id="K10b", mat="KV[Cr(CN)6]", tier="A", what="U = 0 and 1 eV: smallest electron window", unit="eV", expected=1.33, tol=0.01,
+         method="as K09b", files=[KR + "KVCr_U*_LCM_nscf.out"], f=lambda: lowu("win_CB", min), repro=None),
+    dict(id="K11b", mat="KV[Cr(CN)6]", tier="A", what="U = 0 and 1 eV: net moment zero and both band edges in the same spin channel",
+         unit="bool", expected=True, tol=None, method="as K09b", files=[KR + "KVCr_U*_LCM.out", KR + "KVCr_U*_LCM_nscf.out"],
+         f=lambda: all(abs(mag(KR + f"KVCr_{u}_LCM.out")) < 0.01 and win(KR + f"KVCr_{u}_LCM_nscf.out", "unipolar") for u in LOWU),
+         repro=None),
+    dict(id="K11c", mat="KV[Cr(CN)6]", tier="A", what="Plain PBE (U = 0): the band gap stays open", unit="eV", expected=0.575, tol=0.01,
+         method="as K09b", files=[KR + "KVCr_U0_0_LCM_nscf.out"], f=lambda: win(KR + "KVCr_U0_0_LCM_nscf.out", "gap"), repro=None),
+    dict(id="K12b", mat="KV[Cr(CN)6]", tier="A", what="U = 1 eV: E(FM, moment fixed at 6) - E(compensated) per magnetic ion",
+         unit="meV", expected=263.5, tol=0.2, method="as K09b", files=[KR + "KVCr_U1_1_LCM.out", KR + "KVCr_U1_1_FMfix.out"],
+         f=lambda: dE_ion(KR + "KVCr_U1_1_LCM.out", KR + "KVCr_U1_1_FMfix.out", 2), repro=None),
+    dict(id="K12c", mat="KV[Cr(CN)6]", tier="A", what="Plain PBE (U = 0): E(FM, moment fixed at 6) - E(compensated) per magnetic ion",
+         unit="meV", expected=364.9, tol=0.2, method="as K09b", files=[KR + "KVCr_U0_0_LCM.out", KR + "KVCr_U0_0_FMfix.out"],
+         f=lambda: dE_ion(KR + "KVCr_U0_0_LCM.out", KR + "KVCr_U0_0_FMfix.out", 2), repro=None),
     dict(id="K13", mat="KV[Cr(CN)6]", tier="A", what="HSE06: net spin moment", unit="Bohr mag/cell", expected=0.0, tol=0.01, method=HSE_K,
          files=[K + "C_hse06_ideal_LCM/hse_lcm.out"], f=lambda: mag(K + "C_hse06_ideal_LCM/hse_lcm.out"),
          repro=("kvcr_hse", "C_hse06_ideal_LCM/hse_lcm.repro.out", "mag")),

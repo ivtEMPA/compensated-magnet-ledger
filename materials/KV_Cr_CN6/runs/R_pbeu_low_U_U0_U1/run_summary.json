@@ -1,0 +1,23 @@
+{
+ "date": "2026-10-19",
+ "machine": "workstation, Intel i9-10900X (10 cores), Linux",
+ "pw_version": "v.7.5 (conda-forge)",
+ "mpi": "Open MPI 5.0.11",
+ "command": "NP=10 NK=10 bash reproduce/run_qe.sh <input>",
+ "pseudo_check": [
+  "K.upf    ok sha256 d8c19bc3930fe9002d73b1a7a56f320b73cfa0b34c7443a5ba6b49cf32038aa5 md5 0aa97b2c023445f040759afc9fdb6c80",
+  "V.upf    ok sha256 e1ee37c0003003ae9520ac934ed8d90a488b4b01e5a862c658ecfc1e47e402a2 md5 40fb93c06b4f9d8c28c5ccd071294a04",
+  "Cr.upf   ok sha256 933b7a0756ab542be156b0c23de10d74cf15667cf88b59fd83dc8677d3a7b0fe md5 41892f80c335c8b1e803fd21ab4016b0",
+  "C.upf    ok sha256 f828e50a154e3cad756d748c0b6d5320f920bbcd36d07f2cde696fd68f0fc188 md5 34a24e64c0a39f27c6c36b90a16ac686",
+  "N.upf    ok sha256 287a8723d1e8959fdab0c143bb4673be4fa0f82dfc4bff6497417d2e1a6c6079 md5 d34365f73bb0e2ee98afc20ec3e87676"
+ ],
+ "runs": [
+  {"input": "KVCr_U1_1_LCM.in", "scf_iterations": 20, "wall": "6m 26s"},
+  {"input": "KVCr_U1_1_LCM_nscf.in", "wall": "11m 50s"},
+  {"input": "KVCr_U1_1_FM.in", "scf_iterations": 39, "wall": "11m 26s", "note": "converged to a low-moment state (M = 2.44), not used"},
+  {"input": "KVCr_U1_1_FMfix.in", "scf_iterations": 17, "wall": "5m 56s"},
+  {"input": "KVCr_U0_0_LCM.in", "scf_iterations": 47, "wall": "14m 2s"},
+  {"input": "KVCr_U0_0_LCM_nscf.in", "wall": "10m 38s"},
+  {"input": "KVCr_U0_0_FMfix.in", "scf_iterations": 17, "wall": "6m 6s"}
+ ]
+}
